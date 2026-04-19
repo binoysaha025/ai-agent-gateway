@@ -1,3 +1,4 @@
 
 .env
 *.exe
+agent/critic.go

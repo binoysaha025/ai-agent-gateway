@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"github.com/binoysaha025/ai-agent-gateway/tools"
+	"database/sql"
 	"log"
 )
 
@@ -63,7 +64,7 @@ type ToolResult struct {
 	Content   string     `json:"content"`
 }
 
-func Run(prompt string) (string, int, error) {
+func Run(prompt string, db *sql.DB) (string, int, error) {
 	tools := getTools()
 	messages := []Message{
 		{Role: "user", Content: prompt},
@@ -107,7 +108,7 @@ func Run(prompt string) (string, int, error) {
 			toolResults := []ToolResult{}
 			for _, block := range resp.Content {
 				if block.Type == "tool_use" {
-					result := executeTool(block.Name, block.Input)
+					result := executeTool(block.Name, block.Input, db)
 					toolResults = append(toolResults, ToolResult{
 						Type:      "tool_result",
 						ToolUseID: block.ID,
@@ -175,7 +176,7 @@ func callClaude(messages []Message, tools []Tool) (*ClaudeResponse, error) {
 	return &claudeResp, nil
 }
 
-func executeTool(name string, input json.RawMessage) string {
+func executeTool(name string, input json.RawMessage, db *sql.DB) string {
 	switch name {
 	case "calculate":
 		return tools.Calculate(input)
@@ -183,6 +184,8 @@ func executeTool(name string, input json.RawMessage) string {
 		return tools.SummarizeURL(input)
 	case "fetch_news":
 		return tools.FetchNews(input)
+	case "search_knowledge":
+		return tools.SearchKnowledge(input, db)
 	default:
 		return "unknown tool"
 	}
@@ -232,5 +235,21 @@ func getTools() []Tool {
 				Required: []string{},
 			},
 		},
+
+		{
+			Name:        "search_knowledge",
+			Description: "Search the knowledge base for relevant context. Use when answering questions that might benefit from stored documents or domain knowledge.",
+			InputSchema: InputSchema{
+				Type: "object",
+				Properties: map[string]Property{
+            "query": {
+                Type:        "string",
+                Description: "The search query to find relevant documents",
+            },
+        },
+        Required: []string{"query"},
+
+			}
+		}
 	}
 }

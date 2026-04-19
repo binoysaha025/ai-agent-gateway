@@ -49,7 +49,8 @@ func main() {
 			"port":   cfg.Port,
 		})
 	})
-
+	
+	r.POST("/embed", h.EmbedDocument)
 	// protected routes
 	protected := r.Group("/")
 	protected.Use(middleware.AuthMiddleware(database))
@@ -75,7 +76,7 @@ func main() {
 			}
 
 			// run agent
-			response, tokens, err := agent.Run(body.Prompt)
+			response, tokens, err := agent.Run(body.Prompt, database)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				return
