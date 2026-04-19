@@ -44,6 +44,8 @@ Cache Response + Return
 **Agentic AI:**
 - **Agentic RAG** — Claude autonomously decides when to call `search_knowledge`, retrieves semantically similar chunks from pgvector using cosine similarity, reasons over retrieved context
 - **Auto-chunking** — documents are split on sentence boundaries into ~500 char chunks before embedding, preserving semantic integrity
+
+**Critic Agents:**
 - **Ensemble Critic** — 3 specialized critics (factuality, completeness, groundedness) run as parallel Go goroutines, majority vote determines response quality
 - **Self-Reflection** — failed critic evaluations trigger a retry with critic feedback appended to the context window
 
