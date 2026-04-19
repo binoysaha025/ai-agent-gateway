@@ -64,7 +64,7 @@ func (h *Handler) CreateAPIKey(c *gin.Context) {
 	})
 }
 
-func (h *Handler) EmbedDocuments(c *gin.Context) {
+func (h *Handler) EmbedDocument(c *gin.Context) {
 	var body struct {
 		Content string `json:"content"`
 		Metadata string `json:"metadata"`
@@ -76,7 +76,7 @@ func (h *Handler) EmbedDocuments(c *gin.Context) {
 	}
 	
 	// auto chunk into 500 character chunks to preserve semantic integrity of vectors
-	chunks := chunkText(body/Content, 500)
+	chunks := chunkText(body.Content, 500)
 
 	stored := 0
 	for _, chunk := range chunks {

@@ -2,11 +2,12 @@ package tools
 
 import (
 	"bytes"
-	"ecoding/json"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
+	"log"
 )
 
 type VoyageRequest struct {
@@ -22,6 +23,7 @@ type VoyageResponse struct {
 
 func GetEmbedding(text string) ([]float64, error) {
 	apiKey := os.Getenv("VOYAGE_API_KEY")
+	log.Printf("voyage api key: %s", apiKey)
 
 	reqBody := VoyageRequest{
 		Input: []string{text},
@@ -33,7 +35,7 @@ func GetEmbedding(text string) ([]float64, error) {
 		return nil, err
 	}
 
-	req, err := http.NewRequest("POST", "https://api.voyage.com/v1/embeddings", bytes.NewBuffer(body))
+	req, err := http.NewRequest("POST", "https://api.voyageai.com/v1/embeddings", bytes.NewBuffer(body))
 	if err != nil {
 		return nil, err
 	}
@@ -52,6 +54,7 @@ func GetEmbedding(text string) ([]float64, error) {
 	if err != nil {
 		return nil, err
 	}
+	log.Printf("voyage response: %s", string(respBody))
 
 	var voyageResp VoyageResponse
 	if err := json.Unmarshal(respBody, &voyageResp); err != nil {

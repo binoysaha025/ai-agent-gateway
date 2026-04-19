@@ -65,16 +65,47 @@ type ToolResult struct {
 }
 
 func Run(prompt string, db *sql.DB) (string, int, error) {
-	tools := getTools()
+	agentTools := getTools()
 	messages := []Message{
 		{Role: "user", Content: prompt},
 	}
 
 	totalTokens := 0
 
+	// first attempt
+	response, tokens, err := runAgentLoop(messages, agentTools, db)
+	if err != nil {
+		return "", 0, err
+	}
+	totalTokens += tokens
+
+	// evaluate with esemble critic
+	verdict := EvaluateResponse(prompt, response)
+	log.Printf("critic verdict: passed=%v score=%d/3", verdict.Passed, verdict.Score)
+
+	// if critic fails - retry once with feedback
+	if !verdict.Passed {
+		log.Printf("critic failed, retrying with feedback: %s", verdict.Feedback)
+		retryMessages := []Message{
+			{Role: "user", Content: prompt},
+			{Role: "assistant", Content: response},
+			{Role: "user", Content: fmt.Sprintf("Your previous response had the following issues: %s. Please provide an improved response", verdict.Feedback)},
+		}
+		response, tokens, err = runAgentLoop(retryMessages, agentTools, db)
+		if err != nil {
+			return "", totalTokens, err
+		}
+		totalTokens += tokens
+	}
+	return response, totalTokens, nil
+}
+
+func runAgentLoop(messages []Message, agentTools []Tool, db *sql.DB) (string, int, error) {
+	totalTokens := 0
+
 	// agent loop - max 5 iterations to prevent infinite loops
 	for i := 0; i < 5; i++ {
-		resp, err := callClaude(messages, tools)
+		resp, err := callClaude(messages, agentTools)
 		if err != nil {
 			return "", 0, err
 		}
@@ -129,13 +160,13 @@ func Run(prompt string, db *sql.DB) (string, int, error) {
 	return "", 0, fmt.Errorf("agent loop exceeded max iterations")
 }
 
-func callClaude(messages []Message, tools []Tool) (*ClaudeResponse, error) {
+func callClaude(messages []Message, agentTools []Tool) (*ClaudeResponse, error) {
 	apiKey := os.Getenv("ANTHROPIC_KEY")
 
 	reqBody := ClaudeRequest{
 		Model:     "claude-sonnet-4-6",
 		MaxTokens: 1024,
-		Tools:     tools,
+		Tools:     agentTools,
 		Messages:  messages,
 	}
 
@@ -249,7 +280,7 @@ func getTools() []Tool {
         },
         Required: []string{"query"},
 
-			}
-		}
+			},
+		},
 	}
 }
